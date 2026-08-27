@@ -26,3 +26,4 @@ vault/vault-keys
 
 # GitHub Actions self-hosted runner
 actions-runner/
+.venv/
