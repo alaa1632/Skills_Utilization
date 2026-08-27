@@ -1,0 +1,134 @@
+# =========================
+# Python
+# =========================
+
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+
+# =========================
+# Python packaging
+# =========================
+
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# =========================
+# Testing / Coverage
+# =========================
+
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.cache/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# =========================
+# Flask
+# =========================
+
+instance/
+.webassets-cache/
+
+# =========================
+# Logs
+# =========================
+
+*.log
+
+# =========================
+# IDE / Editors
+# =========================
+
+.vscode/
+.idea/
+.spyderproject
+.spyproject
+.ropeproject
+
+# =========================
+# Jupyter
+# =========================
+
+.ipynb_checkpoints/
+
+# =========================
+# Type checkers / linters
+# =========================
+
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+
+# =========================
+# Local temporary files
+# =========================
+
+tempCodeRunnerFile.py
+*.tmp
+*.temp
+*.swp
+*.swo
+.DS_Store
+
+# =========================
+# Vault
+# =========================
+
+vault/data/
+vault/vault-keys
+
+# =========================
+# GitHub Actions Runner
+# =========================
+
+actions-runner/
+
+# =========================
+# Secrets / credentials
+# =========================
+
+*.pem
+*.key
+*.crt
+credentials.json
+secrets.json

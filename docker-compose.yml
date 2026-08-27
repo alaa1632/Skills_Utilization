@@ -1,0 +1,45 @@
+services:
+  backend:
+    build: .
+    container_name: skills-utilization
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    environment:
+      VAULT_ADDR: http://skills-vault:8200
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - skills-network
+      - vault_default
+
+  database:
+    image: postgres:16
+    container_name: skills-database
+    environment:
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${DATABASE_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skills-network
+
+networks:
+  skills-network:
+    driver: bridge
+
+  vault_default:
+    external: true
+
+volumes:
+  postgres-data:
