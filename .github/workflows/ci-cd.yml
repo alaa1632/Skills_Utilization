@@ -1,0 +1,50 @@
+name: Skills Utilization CI/CD
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check Python
+        run: python3 --version
+
+      - name: Install dependencies
+        working-directory: code
+        run: |
+          python3 -m pip install --user -r requirements.txt
+
+      - name: Check application
+        working-directory: code
+        run: |
+          python3 -m py_compile app.py
+          python3 -m py_compile app/*.py
+
+      - name: Build Docker image
+        working-directory: code
+        run: |
+          docker build -t ghcr.io/${{ github.repository_owner }}/skills-utilization:latest .
+
+      - name: Login to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
+            -u "${{ github.actor }}" \
+            --password-stdin
+
+      - name: Push Docker image
+        run: |
+          docker push ghcr.io/${{ github.repository_owner }}/skills-utilization:latest
