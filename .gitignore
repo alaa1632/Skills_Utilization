@@ -22,6 +22,7 @@ __pycache__/
 
 # Vault runtime data
 vault/data/
+vault/vault-keys
 
 # GitHub Actions self-hosted runner
 actions-runner/
