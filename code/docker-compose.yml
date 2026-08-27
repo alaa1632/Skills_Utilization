@@ -1,6 +1,6 @@
 services:
   backend:
-    image: ghcr.io/mm1itriq-dotcom/skills-utilization:latest
+    image: ghcr.io/alaa1632/skills-utilization:latest
     container_name: skills-utilization
     ports:
       - "5000:5000"
