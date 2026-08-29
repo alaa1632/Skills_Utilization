@@ -1,0 +1,63 @@
+name: Security Scan
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  security:
+    name: Security Checks
+    runs-on: self-hosted
+
+    steps:
+
+      # ==========================================
+      # Checkout Repository
+      # ==========================================
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ==========================================
+      # 1. TruffleHog - Secret Scanning
+      # ==========================================
+      - name: TruffleHog Secret Scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
+
+      # ==========================================
+      # 2. Bandit - Python Security Scan
+      # ==========================================
+      - name: Create Python Security Environment
+        run: |
+          python3 -m venv /tmp/security-venv
+          /tmp/security-venv/bin/python -m pip install --upgrade pip
+
+      - name: Install Bandit
+        run: |
+          /tmp/security-venv/bin/pip install bandit
+
+      - name: Bandit Python Security Scan
+        run: |
+          /tmp/security-venv/bin/bandit -r ./code -ll
+
+      # ==========================================
+      # 3. Hadolint - Dockerfile Scan
+      # ==========================================
+      - name: Hadolint Dockerfile Scan
+        run: |
+          docker run --rm -i \
+            hadolint/hadolint:latest \
+            < ./code/Dockerfile
