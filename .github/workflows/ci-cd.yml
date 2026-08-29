@@ -8,15 +8,76 @@ on:
 permissions:
   contents: read
   packages: write
+  security-events: write
 
 jobs:
-  build:
+
+  # ==========================================
+  # SECURITY
+  # ==========================================
+  security:
+    name: Security Scans
     runs-on: self-hosted
 
     steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ========================================
+      # Secret Scan
+      # ========================================
+      - name: Gitleaks Secret Scan
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ========================================
+      # Python Security Scan
+      # ========================================
+      - name: Create Security Virtual Environment
+        run: |
+          python3 -m venv /tmp/security-venv
+          /tmp/security-venv/bin/python -m pip install --upgrade pip
+
+      - name: Install Bandit
+        run: |
+          /tmp/security-venv/bin/pip install bandit
+
+      - name: Bandit Python Security Scan
+        run: |
+          /tmp/security-venv/bin/bandit -r ./code -ll
+
+      # ========================================
+      # Dependency Vulnerability Scan
+      # ========================================
+      - name: Install pip-audit
+        run: |
+          /tmp/security-venv/bin/pip install pip-audit
+
+      - name: pip-audit Dependency Scan
+        working-directory: ./code
+        run: |
+          /tmp/security-venv/bin/pip-audit -r requirements.txt
+
+  # ==========================================
+  # BUILD + DOCKER SECURITY
+  # ==========================================
+  build:
+    name: Build and Scan Docker Image
+    needs: security
+    runs-on: self-hosted
+
+    steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # ========================================
+      # GHCR Login
+      # ========================================
       - name: Login to GHCR
         env:
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
@@ -25,25 +86,51 @@ jobs:
             -u "${{ github.repository_owner }}" \
             --password-stdin
 
+      # ========================================
+      # Docker Build
+      # ========================================
       - name: Build Backend Image
         run: |
           docker build \
             -t ghcr.io/${{ github.repository_owner }}/skills-utilization:latest \
             ./code
 
+      # ========================================
+      # Trivy Image Scan
+      # ========================================
+      - name: Trivy Docker Image Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ghcr.io/${{ github.repository_owner }}/skills-utilization:latest
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
+      # ========================================
+      # Push Image
+      # ========================================
       - name: Push Backend Image
         run: |
           docker push \
             ghcr.io/${{ github.repository_owner }}/skills-utilization:latest
 
+  # ==========================================
+  # DEPLOY
+  # ==========================================
   deploy:
+    name: Deploy
     needs: build
     runs-on: self-hosted
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # ========================================
+      # GHCR Login
+      # ========================================
       - name: Login to GHCR
         env:
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
@@ -52,6 +139,9 @@ jobs:
             -u "${{ github.repository_owner }}" \
             --password-stdin
 
+      # ========================================
+      # Vault Secrets
+      # ========================================
       - name: Get secrets from Vault
         env:
           VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
@@ -59,17 +149,35 @@ jobs:
           chmod 700 ./vault.sh
           ./vault.sh
 
+      # ========================================
+      # Stop Containers
+      # ========================================
       - name: Stop containers
         working-directory: ./code
         run: |
           docker compose down
 
+      # ========================================
+      # Pull Latest Image
+      # ========================================
       - name: Pull latest image
         working-directory: ./code
         run: |
           docker compose pull
 
+      # ========================================
+      # Start Containers
+      # ========================================
       - name: Start containers
         working-directory: ./code
         run: |
           docker compose up -d
+
+      # ========================================
+      # Verify Deployment
+      # ========================================
+      - name: Verify containers
+        working-directory: ./code
+        run: |
+          docker compose ps
+
