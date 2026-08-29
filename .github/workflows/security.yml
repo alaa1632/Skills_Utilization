@@ -30,12 +30,12 @@ jobs:
       # 1. TruffleHog - Secret Scanning
       # ==========================================
       - name: TruffleHog Secret Scan
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./
-          base: ${{ github.event.repository.default_branch }}
-          head: HEAD
-          extra_args: --only-verified
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/repo" \
+            trufflesecurity/trufflehog:latest \
+            git file:///repo \
+            --results=verified,unknown
 
       # ==========================================
       # 2. Bandit - Python Security Scan
