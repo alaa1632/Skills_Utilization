@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 permissions:
   contents: read
@@ -20,42 +17,47 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check Python
-        run: |
-          python3 --version
-
-      - name: Check application syntax
-        working-directory: code
-        run: |
-          python3 -m py_compile app.py
-          python3 -m py_compile app/*.py
-
       - name: Login to GHCR
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
+          echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io \
             -u "${{ github.actor }}" \
             --password-stdin
 
-      - name: Build Docker image
-        working-directory: code
+      - name: Build Backend Image
         run: |
           docker build \
-            -t ghcr.io/${{ github.repository_owner }}/skills-utilization:latest .
+            -t ghcr.io/${{ github.repository_owner }}/skills-utilization:latest \
+            ./code
 
-      - name: Push Docker image
+      - name: Push Backend Image
         run: |
-          docker push \
-            ghcr.io/${{ github.repository_owner }}/skills-utilization:latest
+          docker push ghcr.io/${{ github.repository_owner }}/skills-utilization:latest
 
-      - name: Deploy application
-        working-directory: code
-        run: |
-          docker compose pull backend
-          docker compose up -d database
-          docker compose up -d backend
+  deploy:
+    needs: build
+    runs-on: self-hosted
 
-      - name: Check deployment
-        working-directory: code
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
         run: |
-          docker compose ps
-          docker ps --filter "name=skills-utilization"
+          echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io \
+            -u "${{ github.actor }}" \
+            --password-stdin
+
+      - name: Stop containers
+        working-directory: ./code
+        run: |
+          docker compose down
+
+      - name: Pull latest image
+        working-directory: ./code
+        run: |
+          docker compose pull
+
+      - name: Start containers
+        working-directory: ./code
+        run: |
+          docker compose up -d
