@@ -1,0 +1,104 @@
+name: Security Scan
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  security:
+    name: Security Checks
+    runs-on: self-hosted
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create security reports directory
+        run: |
+          rm -rf security-reports
+          mkdir -p security-reports
+
+      # ==========================================
+      # 1. TruffleHog
+      # ==========================================
+      - name: TruffleHog Secret Scan
+        continue-on-error: true
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/repo" \
+            trufflesecurity/trufflehog:latest \
+            git file:///repo \
+            --results=verified,unknown \
+            > security-reports/trufflehog.txt 2>&1
+
+      # ==========================================
+      # 2. Bandit
+      # ==========================================
+      - name: Create Python Security Environment
+        run: |
+          python3 -m venv /tmp/security-venv
+          /tmp/security-venv/bin/python -m pip install --upgrade pip
+          /tmp/security-venv/bin/pip install bandit
+
+      - name: Bandit Python Security Scan
+        continue-on-error: true
+        run: |
+          /tmp/security-venv/bin/bandit \
+            -r ./code \
+            -ll \
+            -f txt \
+            > security-reports/bandit.txt 2>&1
+
+      # ==========================================
+      # 3. Hadolint
+      # ==========================================
+      - name: Hadolint Dockerfile Scan
+        continue-on-error: true
+        run: |
+          docker run --rm -i \
+            hadolint/hadolint:latest \
+            < ./code/Dockerfile \
+            > security-reports/hadolint.txt 2>&1
+
+      # ==========================================
+      # 4. Docker Build for Trivy
+      # ==========================================
+      - name: Build image for Trivy
+        continue-on-error: true
+        run: |
+          docker build \
+            -t skills-utilization:security-scan \
+            ./code \
+            > security-reports/docker-build.txt 2>&1
+
+      # ==========================================
+      # 5. Trivy
+      # ==========================================
+      - name: Trivy Image Scan
+        continue-on-error: true
+        run: |
+          trivy image \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            skills-utilization:security-scan \
+            > security-reports/trivy.txt 2>&1
+
+      # ==========================================
+      # Upload all reports
+      # ==========================================
+      - name: Upload Security Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: security-reports/
