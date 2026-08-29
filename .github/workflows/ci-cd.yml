@@ -18,9 +18,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Login to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
         run: |
-          echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io \
-            -u "${{ github.actor }}" \
+          echo "$GHCR_TOKEN" | docker login ghcr.io \
+            -u "${{ github.repository_owner }}" \
             --password-stdin
 
       - name: Build Backend Image
@@ -43,12 +45,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Login to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
         run: |
-          echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io \
-            -u "${{ github.actor }}" \
+          echo "$GHCR_TOKEN" | docker login ghcr.io \
+            -u "${{ github.repository_owner }}" \
             --password-stdin
 
       - name: Get secrets from Vault
+        env:
+          VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
         run: |
           chmod 700 ./vault.sh
           ./vault.sh
