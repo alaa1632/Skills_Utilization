@@ -31,7 +31,8 @@ jobs:
 
       - name: Push Backend Image
         run: |
-          docker push ghcr.io/${{ github.repository_owner }}/skills-utilization:latest
+          docker push \
+            ghcr.io/${{ github.repository_owner }}/skills-utilization:latest
 
   deploy:
     needs: build
@@ -46,6 +47,11 @@ jobs:
           echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io \
             -u "${{ github.actor }}" \
             --password-stdin
+
+      - name: Get secrets from Vault
+        run: |
+          chmod 700 ./vault.sh
+          ./vault.sh
 
       - name: Stop containers
         working-directory: ./code
